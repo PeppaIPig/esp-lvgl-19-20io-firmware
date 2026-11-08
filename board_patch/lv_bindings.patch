@@ -1,0 +1,102 @@
+diff --git a/driver/esp32/espidf.c b/driver/esp32/espidf.c
+index 35080e7..46f80f4 100644
+--- a/driver/esp32/espidf.c
++++ b/driver/esp32/espidf.c
+@@ -23,6 +23,21 @@ inline uint32_t gpio_intr_pending(void){return 0;}
+ inline void gpio_intr_handler_register(gpio_intr_handler_fn_t fn, void *arg){}
+ inline void gpio_init(void){}
+ 
++#if CONFIG_IDF_TARGET_ESP32S3
++uint32_t gpio_input_get_high(void){return 0;}
++void gpio_output_set_high(uint32_t set_mask, uint32_t clear_mask, uint32_t enable_mask, uint32_t disable_mask){}
++int xt_clock_freq(void){return 240000000;}
++void lldesc_build_chain(uint8_t *descptr, uint32_t desclen, uint8_t *mblkptr, uint32_t buflen, uint32_t blksz, uint8_t owner, lldesc_t **head, lldesc_t **tail){}
++lldesc_t *lldesc_num2link(lldesc_t *head, uint16_t nblks){return NULL;}
++lldesc_t *lldesc_set_owner(lldesc_t *head, uint16_t nblks, uint8_t owner){return NULL;}
++esp_eth_phy_t *esp_eth_phy_new_lan87xx(const eth_phy_config_t *config){return NULL;}
++esp_eth_phy_t *esp_eth_phy_new_ksz8081(const eth_phy_config_t *config){return NULL;}
++esp_eth_phy_t *esp_eth_phy_new_ksz8041(const eth_phy_config_t *config){return NULL;}
++esp_eth_phy_t *esp_eth_phy_new_dp83848(const eth_phy_config_t *config){return NULL;}
++esp_eth_phy_t *esp_eth_phy_new_rtl8201(const eth_phy_config_t *config){return NULL;}
++esp_eth_phy_t *esp_eth_phy_new_ip101(const eth_phy_config_t *config){return NULL;}
++#endif
++
+ void task_delay_ms(int ms)
+ {
+     vTaskDelay(ms / portTICK_RATE_MS);
+diff --git a/driver/esp32/espidf.h b/driver/esp32/espidf.h
+index 3455944..cf83752 100644
+--- a/driver/esp32/espidf.h
++++ b/driver/esp32/espidf.h
+@@ -82,8 +82,10 @@ void * memset ( void * ptr, int value, size_t num );
+ 
+ static inline void SPH0645_WORKAROUND(int i2s_num)
+ {
++#if CONFIG_IDF_TARGET_ESP32
+     REG_SET_BIT( I2S_TIMING_REG(i2s_num), BIT(9));
+     REG_SET_BIT( I2S_CONF_REG(i2s_num), I2S_RX_MSB_SHIFT);
++#endif
+ }
+ 
+ /////////////////////////////////////////////////////////////////////////////////////////////
+@@ -177,9 +179,27 @@ void ex_spi_post_cb_isr(spi_transaction_t *trans);
+ #if defined(ESP_IDF_VERSION_MAJOR) && ESP_IDF_VERSION_MAJOR >= 4
+ // SPI HOST enum was changed to macros on v4
+ enum {
++#if defined(SPI_HOST)
+     ENUM_SPI_HOST = SPI_HOST,
++#elif defined(SPI1_HOST)
++    ENUM_SPI_HOST = SPI1_HOST,
++#else
++    ENUM_SPI_HOST = 0,
++#endif
++#if defined(HSPI_HOST)
+     ENUM_HSPI_HOST = HSPI_HOST,
++#elif defined(SPI2_HOST)
++    ENUM_HSPI_HOST = SPI2_HOST,
++#else
++    ENUM_HSPI_HOST = 1,
++#endif
++#if defined(VSPI_HOST)
+     ENUM_VSPI_HOST = VSPI_HOST,
++#elif defined(SPI3_HOST)
++    ENUM_VSPI_HOST = SPI3_HOST,
++#else
++    ENUM_VSPI_HOST = 2,
++#endif
+ };
+ #endif
+ 
+diff --git a/driver/esp32/modrtch.c b/driver/esp32/modrtch.c
+index 8d32ef6..559ddec 100644
+--- a/driver/esp32/modrtch.c
++++ b/driver/esp32/modrtch.c
+@@ -1,6 +1,19 @@
+ 
+-//////////////////////////////////////////////////////////////////////////////
+-// Includes
++#include "sdkconfig.h"
++#if !CONFIG_IDF_TARGET_ESP32
++#include "py/runtime.h"
++#include "py/obj.h"
++
++STATIC const mp_rom_map_elem_t rtch_globals_table[] = {
++    { MP_ROM_QSTR(MP_QSTR___name__), MP_ROM_QSTR(MP_QSTR_rtch) },
++};
++STATIC MP_DEFINE_CONST_DICT(mp_module_rtch_globals, rtch_globals_table);
++const mp_obj_module_t mp_module_rtch = {
++    .base = { &mp_type_module },
++    .globals = (mp_obj_dict_t*)&mp_module_rtch_globals,
++};
++MP_REGISTER_MODULE(MP_QSTR_rtch, mp_module_rtch);
++#else
+ //////////////////////////////////////////////////////////////////////////////
+ 
+ // Uncomment the following line to see logs!
+@@ -531,4 +544,6 @@ STATIC void rtch_task(void* arg)
+     }
+ }
+ 
++#endif
++
+ 

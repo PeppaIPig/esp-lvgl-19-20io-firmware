@@ -61,6 +61,8 @@ TARGET_BOARD_DIR="ports/esp32/boards/${BOARD_NAME}"
 cp -f "${SCRIPT_DIR}/board_patch/mpconfigboard.h" "${TARGET_BOARD_DIR}/mpconfigboard.h"
 cp -f "${SCRIPT_DIR}/board_patch/sdkconfig.board" "${TARGET_BOARD_DIR}/sdkconfig.board"
 cp -f "${SCRIPT_DIR}/board_patch/partitions-8MiB.csv" "ports/esp32/partitions-8MiB.csv"
+cp -f "${SCRIPT_DIR}/board_patch/machine_encoder.c" "ports/esp32/machine_encoder.c"
+cp -f "${SCRIPT_DIR}/board_patch/machine_encoder.h" "ports/esp32/machine_encoder.h"
 
 # 编译 mpy-cross
 make -C mpy-cross -j$(sysctl -n hw.ncpu)

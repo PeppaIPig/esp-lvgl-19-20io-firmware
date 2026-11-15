@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK_DIR="${SCRIPT_DIR}/workspace"
 REPO_DIR="${WORK_DIR}/lv_micropython"
 DIST_DIR="${SCRIPT_DIR}/dist_windows"
-BOARD_NAME="GENERIC_S3"
+BOARD_NAME="GENERIC_S3_SPIRAM"
 
 echo "=== [1/6] 检查与配置编译环境 ==="
 if [ -z "$IDF_PATH" ]; then

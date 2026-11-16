@@ -1,0 +1,26 @@
+#define MODULE_NAME "GENERIC_S3_N8R8"
+#define MICROPY_HW_BOARD_NAME "ESP32S3 (LVGL8.3-8MB_OPI-PCNT-GPIO19/20-Freed)"
+#define MICROPY_HW_MCU_NAME "ESP32S3"
+
+#define MICROPY_PY_BLUETOOTH (0)
+#define MICROPY_PY_MACHINE_DAC (0)
+
+// [核心释放] 禁用原生 USB-SERIAL-JTAG 与 USBDEV，释放 GPIO19(D-) 与 GPIO20(D+) 为普通GPIO
+#define MICROPY_HW_ENABLE_USB_SERIAL_JTAG (0)
+#define MICROPY_HW_ENABLE_USBDEV          (0)
+
+// [串口重定向] 绑定 REPL 到硬件 UART0 (TX=GPIO43, RX=GPIO44)
+#define MICROPY_HW_ENABLE_UART_REPL       (1)
+#define MICROPY_HW_UART_REPL              (0)
+#define MICROPY_HW_UART_REPL_BAUD         (115200)
+
+// 启用扩展引脚支持 (GPIO47/48)
+#define MICROPY_HW_ESP32S3_EXTENDED_IO    (1)
+
+// 启用 4路硬件 PCNT 编码器驱动
+#define MICROPY_PY_MACHINE_ENCODER        (1)
+#define MICROPY_PY_MACHINE_COUNTER        (1)
+#define MICROPY_PY_MACHINE_PCNT           (1)
+
+#define MICROPY_HW_I2C0_SCL               (9)
+#define MICROPY_HW_I2C0_SDA               (8)

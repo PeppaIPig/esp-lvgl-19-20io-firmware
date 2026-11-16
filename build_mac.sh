@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Mac (Apple Silicon M系列/Intel) lv_micropython + LVGL 8.3 固件编译脚本
-# 适用芯片: ESP32-S3 (释放 GPIO19、GPIO20 为普通引脚)
+# 适用芯片: ESP32-S3 (释放 GPIO19、GPIO20 为普通引脚，支持 N8R8 / N8R2 双硬件)
 # ==============================================================================
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORK_DIR="${SCRIPT_DIR}/workspace"
 REPO_DIR="${WORK_DIR}/lv_micropython"
-DIST_DIR="${SCRIPT_DIR}/dist_windows"
-BOARD_NAME="GENERIC_S3_SPIRAM"
+DIST_WIN="${SCRIPT_DIR}/dist_windows"
+DIST_MAC="${SCRIPT_DIR}/dist_mac"
 
 echo "=== [1/6] 检查与配置编译环境 ==="
 if [ -z "$IDF_PATH" ]; then
@@ -56,33 +56,62 @@ if [ -f "${SCRIPT_DIR}/board_patch/lv_bindings.patch" ]; then
     cd ../..
 fi
 
-# 确保板级配置就绪
-TARGET_BOARD_DIR="ports/esp32/boards/${BOARD_NAME}"
-cp -f "${SCRIPT_DIR}/board_patch/mpconfigboard.h" "${TARGET_BOARD_DIR}/mpconfigboard.h"
-cp -f "${SCRIPT_DIR}/board_patch/sdkconfig.board" "${TARGET_BOARD_DIR}/sdkconfig.board"
+# 同步公共代码与板级目标
 cp -f "${SCRIPT_DIR}/board_patch/partitions-8MiB.csv" "ports/esp32/partitions-8MiB.csv"
 cp -f "${SCRIPT_DIR}/board_patch/machine_encoder.c" "ports/esp32/machine_encoder.c"
 cp -f "${SCRIPT_DIR}/board_patch/machine_encoder.h" "ports/esp32/machine_encoder.h"
 
+cp -rf "${SCRIPT_DIR}/board_patch/GENERIC_S3_N8R8" "ports/esp32/boards/"
+cp -rf "${SCRIPT_DIR}/board_patch/GENERIC_S3_N8R2" "ports/esp32/boards/"
+
 # 编译 mpy-cross
 make -C mpy-cross -j$(sysctl -n hw.ncpu)
 
-echo "=== [5/6] 编译 ESP32-S3 固件 ==="
-make -C ports/esp32 BOARD=${BOARD_NAME} submodules
-make -C ports/esp32 BOARD=${BOARD_NAME} -j$(sysctl -n hw.ncpu)
+# 目标判断 (支持传参编译单一目标，默认全量编译双目标)
+TARGET="$1"
+BOARDS_TO_BUILD=()
 
-echo "=== [6/6] 导出交付固件 ==="
-BUILD_OUTPUT_DIR="ports/esp32/build-${BOARD_NAME}"
-mkdir -p "$DIST_DIR"
-
-if [ -f "${BUILD_OUTPUT_DIR}/firmware.bin" ]; then
-    cp -f "${BUILD_OUTPUT_DIR}/firmware.bin" "${DIST_DIR}/firmware.bin"
-    cp -f "${BUILD_OUTPUT_DIR}/firmware.bin" "${SCRIPT_DIR}/firmware.bin"
-    echo "=========================================================="
-    echo "编译完成！固件已生成并复制到交付目录:"
-    echo "-> ${DIST_DIR}/firmware.bin"
-    echo "=========================================================="
+if [ "$TARGET" == "n8r8" ] || [ "$TARGET" == "N8R8" ]; then
+    BOARDS_TO_BUILD=("GENERIC_S3_N8R8")
+elif [ "$TARGET" == "n8r2" ] || [ "$TARGET" == "N8R2" ]; then
+    BOARDS_TO_BUILD=("GENERIC_S3_N8R2")
 else
-    echo "错误: 未生成 firmware.bin，请检查编译日志！"
-    exit 1
+    BOARDS_TO_BUILD=("GENERIC_S3_N8R8" "GENERIC_S3_N8R2")
 fi
+
+echo "=== [5/6] 编译 ESP32-S3 目标固件: ${BOARDS_TO_BUILD[*]} ==="
+mkdir -p "$DIST_WIN" "$DIST_MAC"
+
+for BOARD in "${BOARDS_TO_BUILD[@]}"; do
+    echo ">>> 开始编译板型: ${BOARD} ..."
+    make -C ports/esp32 BOARD="${BOARD}" submodules
+    make -C ports/esp32 BOARD="${BOARD}" -j$(sysctl -n hw.ncpu)
+    
+    BUILD_DIR="ports/esp32/build-${BOARD}"
+    BIN_NAME="firmware_N8R8.bin"
+    [ "$BOARD" == "GENERIC_S3_N8R2" ] && BIN_NAME="firmware_N8R2.bin"
+
+    if [ -f "${BUILD_DIR}/firmware.bin" ]; then
+        cp -f "${BUILD_DIR}/firmware.bin" "${SCRIPT_DIR}/${BIN_NAME}"
+        cp -f "${BUILD_DIR}/firmware.bin" "${DIST_WIN}/${BIN_NAME}"
+        cp -f "${BUILD_DIR}/firmware.bin" "${DIST_MAC}/${BIN_NAME}"
+        echo "[√] 成功生成: ${BIN_NAME}"
+    else
+        echo "错误: 板型 ${BOARD} 未生成固件！"
+        exit 1
+    fi
+done
+
+# 默认主固件指向 N8R8
+if [ -f "${SCRIPT_DIR}/firmware_N8R8.bin" ]; then
+    cp -f "${SCRIPT_DIR}/firmware_N8R8.bin" "${SCRIPT_DIR}/firmware.bin"
+    cp -f "${SCRIPT_DIR}/firmware_N8R8.bin" "${DIST_WIN}/firmware.bin"
+    cp -f "${SCRIPT_DIR}/firmware_N8R8.bin" "${DIST_MAC}/firmware.bin"
+fi
+
+echo "=== [6/6] 导出交付固件完成 ==="
+echo "=========================================================="
+echo "固件已同步至根目录、dist_windows 与 dist_mac:"
+echo "1. firmware_N8R8.bin (8MB Octal/OPI PSRAM)"
+echo "2. firmware_N8R2.bin (2MB Quad/QSPI PSRAM)"
+echo "=========================================================="

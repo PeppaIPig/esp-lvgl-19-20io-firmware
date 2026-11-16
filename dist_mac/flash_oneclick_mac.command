@@ -2,6 +2,7 @@
 # ==============================================================================
 # ESP32-S3 LVGL8.3 固件一键烧录工具 (Mac 用户双击可用)
 # 适用平台: macOS (Apple Silicon M系列 / Intel)
+# 支持硬件: N8R8 (8MB OPI PSRAM) 与 N8R2 (2MB QSPI PSRAM) 双版本
 # ==============================================================================
 cd "$(dirname "$0")"
 
@@ -16,16 +17,7 @@ echo "1. 请务必连接【第二个独立UART接口】(带有 CH340 / CP2102 �
 echo "2. 原来绑定GPIO19/20的原生USB口已关闭虚拟串口功能，无法用于烧录和REPL调试。"
 echo "------------------------------------------------------------------------------"
 
-# 1. 检查待烧录固件
-if [ ! -f "firmware.bin" ]; then
-    echo "【错误】当前目录下未找到固件文件 firmware.bin！"
-    echo "请确认 firmware.bin 与本脚本位于同一文件夹下。"
-    echo ""
-    read -n 1 -s -r -p "按任意键退出..."
-    exit 1
-fi
-
-# 2. 检测/配置烧录工具 esptool
+# 1. 检测/配置烧录工具 esptool
 echo "正在检测烧录环境..."
 ESPTOOL_BIN=""
 
@@ -39,7 +31,6 @@ elif command -v python3 >/dev/null 2>&1 && python3 -c "import esptool" >/dev/nul
     ESPTOOL_BIN="python3 -m esptool"
 fi
 
-# 如果未安装 esptool，尝试自动轻量安装
 if [ -z "$ESPTOOL_BIN" ]; then
     if command -v python3 >/dev/null 2>&1; then
         echo "首次运行，正在自动准备烧录依赖 (esptool)..."
@@ -66,7 +57,7 @@ fi
 echo "烧录工具就绪: $ESPTOOL_BIN"
 echo ""
 
-# 3. 自动扫描可用 USB 串口
+# 2. 自动扫描可用 USB 串口
 echo "正在扫描连接的开发板串口..."
 PORTS=($(ls /dev/cu.wchusbserial* /dev/cu.usbserial* /dev/cu.SLAB_USBtoUART* /dev/cu.usbmodem* 2>/dev/null || true))
 
@@ -78,7 +69,7 @@ if [ ${#PORTS[@]} -eq 0 ]; then
     echo "2. 数据线是否为纯充电线？（请更换为支持数据传输的线缆）"
     echo "3. 若为 CH340 芯片，是否已安装 Mac 版 CH34xVCPDriver 驱动？"
     echo ""
-    read -r -p "请手动输入端口路径 (例如 /dev/cu.wchusbserial5AE60279341): " MANUAL_PORT
+    read -r -p "请手动输入端口路径 (例如 /dev/cu.wchusbserial5AE60415131): " MANUAL_PORT
     SELECTED_PORT="$MANUAL_PORT"
 elif [ ${#PORTS[@]} -eq 1 ]; then
     SELECTED_PORT="${PORTS[0]}"
@@ -104,10 +95,39 @@ if [ -z "$SELECTED_PORT" ]; then
     exit 1
 fi
 
+# 3. 选择开发板型号
+echo ""
+echo "------------------------------------------------------------------------------"
+echo "请选择您的 ESP32-S3 开发板硬件型号："
+echo "  1) ESP32-S3 N8R8 / N16R8 (8MB/16MB Octal/OPI 八线 PSRAM) -> 烧录 firmware_N8R8.bin"
+echo "  2) ESP32-S3 N8R2 / 2MB板 (2MB Quad/QSPI 四线 PSRAM)       -> 烧录 firmware_N8R2.bin"
+echo "------------------------------------------------------------------------------"
+read -r -p "请输入选项 [1 或 2，按回车默认选择 1]: " HW_CHOICE
+
+TARGET_BIN="firmware_N8R8.bin"
+if [ "$HW_CHOICE" == "2" ]; then
+    TARGET_BIN="firmware_N8R2.bin"
+    echo "已选择: [2] 2MB Quad PSRAM 固件 (firmware_N8R2.bin)"
+else
+    echo "已选择: [1] 8MB Octal PSRAM 固件 (firmware_N8R8.bin)"
+fi
+
+if [ ! -f "$TARGET_BIN" ]; then
+    if [ -f "firmware.bin" ]; then
+        echo "【提示】未找到 $TARGET_BIN，自动使用通用固件 firmware.bin"
+        TARGET_BIN="firmware.bin"
+    else
+        echo "【错误】当前目录下未找到固件文件 $TARGET_BIN！"
+        echo ""
+        read -n 1 -s -r -p "按任意键退出..."
+        exit 1
+    fi
+fi
+
 echo ""
 echo "=============================================================================="
 echo "目标串口: $SELECTED_PORT"
-echo "待刷固件: firmware.bin (约 2.1MB)"
+echo "待刷固件: $TARGET_BIN"
 echo "即将开始: 全片擦除旧数据 -> 烧录全新固件 -> 自动复位"
 echo "=============================================================================="
 read -r -p "请按回车键开始烧录..."
@@ -119,15 +139,15 @@ $ESPTOOL_BIN --chip esp32s3 --port "$SELECTED_PORT" --baud 921600 erase_flash ||
 }
 
 echo ""
-echo ">>> [2/2] 正在向 ESP32-S3 写入全新固件..."
+echo ">>> [2/2] 正在向 ESP32-S3 写入全新固件 ($TARGET_BIN)..."
 $ESPTOOL_BIN --chip esp32s3 --port "$SELECTED_PORT" --baud 921600 \
     --before default_reset --after hard_reset \
-    write_flash -z --flash_mode dio --flash_freq 80m --flash_size 8MB 0x0 firmware.bin
+    write_flash -z --flash_mode dio --flash_freq 80m --flash_size 8MB 0x0 "$TARGET_BIN"
 
 if [ $? -eq 0 ]; then
     echo ""
     echo "=============================================================================="
-    echo "   [√ 烧录成功！] 固件已顺利写入 ESP32-S3！"
+    echo "   [√ 烧录成功！] 固件 ($TARGET_BIN) 已顺利写入 ESP32-S3！"
     echo "   开发板已自动复位重启。"
     echo "   您现在可以在 Thonny IDE 中选择 $SELECTED_PORT 开始 MicroPython 编程。"
     echo "=============================================================================="

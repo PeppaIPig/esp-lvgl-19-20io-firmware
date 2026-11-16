@@ -1,4 +1,4 @@
-# ESP32-S3 LVGL 8.3 + 8MB PSRAM + 4路PCNT硬件编码器 定制固件说明文档
+# ESP32-S3 LVGL 8.3 + PSRAM (N8R8 / N8R2 双硬件适配) + 4路PCNT硬件编码器 定制固件说明文档
 
 本文档是定制版 `lv_micropython` 固件的技术规格说明、硬件接线图解、烧录流程及开发指南。
 
@@ -9,12 +9,12 @@
 | 项目 | 参数 / 规格 | 说明 |
 | :--- | :--- | :--- |
 | **基础内核** | `lv_micropython` (release/v8) | 对齐官方稳定版，MicroPython v1.19.1 内核 |
-| **片上 PSRAM** | **开启 8MB 高速 PSRAM** (`CONFIG_SPIRAM_MODE_OCT=y`) | 完整挂载片上 8MB OPI (Octal) PSRAM 为 GC 堆内存，可用内存从 140KB 暴涨至 **8.2MB (8,194,064 Bytes，暴涨 58 倍)**，彻底根治 `MemoryError` |
+| **双硬件 PSRAM 支持** | **N8R8 (8MB OPI)**：`CONFIG_SPIRAM_MODE_OCT=y`<br>**N8R2 (2MB QSPI)**：`CONFIG_SPIRAM_MODE_QUAD=y` | 提供两套专属固件：<br>1. **N8R8 版**：可用堆内存暴涨至 **8.2MB (8,194,064 Bytes，暴涨 58 倍)**；<br>2. **N8R2 版**：可用堆内存达到 **2.0MB (2,049,088 Bytes，暴涨 15 倍)**，彻底根治 `MemoryError` |
 | **GUI 引擎** | **LVGL v8.3.x** | 原生 C 绑定，语法 **100% 兼容 [sim.lvgl.io](https://sim.lvgl.io)** |
 | **硬件编码器** | **4路硬件 PCNT 编码器** (`machine.Encoder`) | 内置 PCNT 硬件单元（Unit 0~3），4倍频正交解码，64位连续累加，专为 4WD 麦克纳姆轮高速电机设计 |
 | **特殊引脚支持** | **GPIO 46 作为 PCNT 输入** | 适配 GPIO46 (Input-only Strapping 引脚)，GPIO Matrix 硬件直通计数，无需软件中断 |
 | **中断越界修复** | **全量 GPIO 0~48 软硬件中断** | 修复官方经典 40 引脚数组限制，扩展至 `SOC_GPIO_PIN_COUNT=49`，彻底消除 GPIO >= 40 (`Pin.irq()`) 踩踏 VFS 崩溃 Bug |
-| **适用芯片** | **ESP32-S3** (Dual-Core Xtensa LX7) | 支持标准 ESP32-S3 开发板（适配 N8R8 / N16R8 等集成 8MB Octal PSRAM 的核心板） |
+| **适用芯片** | **ESP32-S3** (Dual-Core Xtensa LX7) | 完美支持各类 ESP32-S3 双 USB 接口开发板（覆盖 N8R8、N16R8 及 N8R2 等不同运存版本） |
 | **Flash 规格** | 8MB Flash (DIO, 80MHz) | 向下兼容 16MB Flash 开发板 |
 | **分区布局** | Factory: 3008 KB (`0x2F0000`)<br>VFS: 5120 KB (`0x500000`) | 固件体积约 2.0MB，预留充裕空间，提供 5MB 大容量文件存储空间 |
 | **内置屏幕驱动** | `ili9XXX` 驱动框架 | 内置 **ST7789, GC9A01, ILI9341, ILI9488, ST7735** |
@@ -65,9 +65,11 @@ graph TD
 ### 交付包目录结构：
 
 ```text
-├── firmware.bin                # 编译好的 2.0MB 完整固件镜像 (含 2MB PSRAM + LVGL8.3 + PCNT)
-├── flash_oneclick_mac.command  # Mac 用户双击一键烧录脚本
-├── flash_oneclick.bat          # Windows 双击一键烧录批处理脚本
+├── firmware_N8R8.bin           # 适配 N8R8 / N16R8 的固件 (8MB Octal/OPI PSRAM，满血 8.2MB 运存)
+├── firmware_N8R2.bin           # 适配 N8R2 的固件 (2MB Quad/QSPI PSRAM，满血 2.0MB 运存)
+├── firmware.bin                # 默认固件软链/副本 (指向 N8R8)
+├── flash_oneclick_mac.command  # Mac 用户双击一键烧录脚本 (自带板型选择菜单)
+├── flash_oneclick.bat          # Windows 双击一键烧录批处理脚本 (自带板型选择菜单)
 ├── readme.txt                  # 简易操作说明
 ├── test_encoder.py             # 4路硬件PCNT编码器与中断测试脚本
 ├── test_gpio.py                # GPIO19/20 功能验证脚本

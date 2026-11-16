@@ -30,7 +30,7 @@ ESP32-S3 常见开发板通常配备两个 Type-C 接口。本固件针对硬件
 ```mermaid
 graph TD
     subgraph ESP32-S3 芯片内部
-        Core[CPU 双核 Xtensa] --> PSRAM[2MB 片上高速 PSRAM: 自动挂载为 2MB+ GC 堆]
+        Core[CPU 双核 Xtensa] --> PSRAM[片上高速 PSRAM (2MB/8MB/16MB): 自动挂载为独立 GC 大堆]
         Core --> UART0[硬件 UART0: TX=43, RX=44]
         Core --> GPIO19[GPIO 19 / D-]
         Core --> GPIO20[GPIO 20 / D+]
@@ -95,12 +95,15 @@ graph TD
 
 ## 验证与测试代码
 
-### 1. 验证 2MB PSRAM 堆内存 (`gc.mem_free()`)
+### 1. 验证 PSRAM 堆内存 (`gc.mem_free()`)
 
 ```python
 import gc
 print("当前 MicroPython 可用内存 (Bytes):", gc.mem_free())
-# 预期输出: 8190000+ (8.2MB 以上，较之前 140KB 暴涨 58 倍！)
+# 预期输出: 
+# • N8R8 板:  8190000+ (约 8.2MB，较普通无 PSRAM 固件暴涨 58 倍！)
+# • N8R16 板: 16700000+ (约 16MB)
+# • N8R2 板:  2000000+ (约 2.0MB)
 ```
 
 ### 2. 4路硬件 PCNT 编码器与 GPIO 中断测试 (`test_encoder.py`)

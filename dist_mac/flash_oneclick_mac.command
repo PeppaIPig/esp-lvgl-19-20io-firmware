@@ -2,7 +2,7 @@
 # ==============================================================================
 # ESP32-S3 LVGL8.3 固件一键烧录工具 (Mac 用户双击可用)
 # 适用平台: macOS (Apple Silicon M系列 / Intel)
-# 支持硬件: N8R8 (8MB OPI PSRAM) 与 N8R2 (2MB QSPI PSRAM) 双版本
+# 支持硬件: N8R8 (8MB OPI)、N8R16 (16MB OPI) 与 N8R2 (2MB QSPI) 三版本
 # ==============================================================================
 cd "$(dirname "$0")"
 
@@ -99,15 +99,19 @@ fi
 echo ""
 echo "------------------------------------------------------------------------------"
 echo "请选择您的 ESP32-S3 开发板硬件型号："
-echo "  1) ESP32-S3 N8R8 / N16R8 (8MB/16MB Octal/OPI 八线 PSRAM) -> 烧录 firmware_N8R8.bin"
-echo "  2) ESP32-S3 N8R2 / 2MB板 (2MB Quad/QSPI 四线 PSRAM)       -> 烧录 firmware_N8R2.bin"
+echo "  1) ESP32-S3 N8R8  / N16R8  (8MB Octal/OPI 八线 PSRAM，满血 8.2MB 运存)  -> firmware_N8R8.bin"
+echo "  2) ESP32-S3 N8R16 / N16R16 (16MB Octal/OPI 八线 PSRAM，满血 16MB 运存)  -> firmware_N8R16.bin"
+echo "  3) ESP32-S3 N8R2  / 2MB板  (2MB Quad/QSPI 四线 PSRAM，满血 2.0MB 运存)  -> firmware_N8R2.bin"
 echo "------------------------------------------------------------------------------"
-read -r -p "请输入选项 [1 或 2，按回车默认选择 1]: " HW_CHOICE
+read -r -p "请输入选项 [1、2 或 3，按回车默认选择 1]: " HW_CHOICE
 
 TARGET_BIN="firmware_N8R8.bin"
 if [ "$HW_CHOICE" == "2" ]; then
+    TARGET_BIN="firmware_N8R16.bin"
+    echo "已选择: [2] 16MB Octal PSRAM 固件 (firmware_N8R16.bin)"
+elif [ "$HW_CHOICE" == "3" ]; then
     TARGET_BIN="firmware_N8R2.bin"
-    echo "已选择: [2] 2MB Quad PSRAM 固件 (firmware_N8R2.bin)"
+    echo "已选择: [3] 2MB Quad PSRAM 固件 (firmware_N8R2.bin)"
 else
     echo "已选择: [1] 8MB Octal PSRAM 固件 (firmware_N8R8.bin)"
 fi

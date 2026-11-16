@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Mac (Apple Silicon M系列/Intel) lv_micropython + LVGL 8.3 固件编译脚本
-# 适用芯片: ESP32-S3 (释放 GPIO19、GPIO20 为普通引脚，支持 N8R8 / N8R2 双硬件)
+# 适用芯片: ESP32-S3 (释放 GPIO19、GPIO20 为普通引脚，支持 N8R8 / N8R16 / N8R2 三硬件)
 # ==============================================================================
 set -e
 
@@ -62,21 +62,24 @@ cp -f "${SCRIPT_DIR}/board_patch/machine_encoder.c" "ports/esp32/machine_encoder
 cp -f "${SCRIPT_DIR}/board_patch/machine_encoder.h" "ports/esp32/machine_encoder.h"
 
 cp -rf "${SCRIPT_DIR}/board_patch/GENERIC_S3_N8R8" "ports/esp32/boards/"
+cp -rf "${SCRIPT_DIR}/board_patch/GENERIC_S3_N8R16" "ports/esp32/boards/"
 cp -rf "${SCRIPT_DIR}/board_patch/GENERIC_S3_N8R2" "ports/esp32/boards/"
 
 # 编译 mpy-cross
 make -C mpy-cross -j$(sysctl -n hw.ncpu)
 
-# 目标判断 (支持传参编译单一目标，默认全量编译双目标)
+# 目标判断 (支持传参编译单一目标，默认全量编译三目标)
 TARGET="$1"
 BOARDS_TO_BUILD=()
 
 if [ "$TARGET" == "n8r8" ] || [ "$TARGET" == "N8R8" ]; then
     BOARDS_TO_BUILD=("GENERIC_S3_N8R8")
+elif [ "$TARGET" == "n8r16" ] || [ "$TARGET" == "N8R16" ]; then
+    BOARDS_TO_BUILD=("GENERIC_S3_N8R16")
 elif [ "$TARGET" == "n8r2" ] || [ "$TARGET" == "N8R2" ]; then
     BOARDS_TO_BUILD=("GENERIC_S3_N8R2")
 else
-    BOARDS_TO_BUILD=("GENERIC_S3_N8R8" "GENERIC_S3_N8R2")
+    BOARDS_TO_BUILD=("GENERIC_S3_N8R8" "GENERIC_S3_N8R16" "GENERIC_S3_N8R2")
 fi
 
 echo "=== [5/6] 编译 ESP32-S3 目标固件: ${BOARDS_TO_BUILD[*]} ==="
@@ -89,6 +92,7 @@ for BOARD in "${BOARDS_TO_BUILD[@]}"; do
     
     BUILD_DIR="ports/esp32/build-${BOARD}"
     BIN_NAME="firmware_N8R8.bin"
+    [ "$BOARD" == "GENERIC_S3_N8R16" ] && BIN_NAME="firmware_N8R16.bin"
     [ "$BOARD" == "GENERIC_S3_N8R2" ] && BIN_NAME="firmware_N8R2.bin"
 
     if [ -f "${BUILD_DIR}/firmware.bin" ]; then
@@ -112,6 +116,7 @@ fi
 echo "=== [6/6] 导出交付固件完成 ==="
 echo "=========================================================="
 echo "固件已同步至根目录、dist_windows 与 dist_mac:"
-echo "1. firmware_N8R8.bin (8MB Octal/OPI PSRAM)"
-echo "2. firmware_N8R2.bin (2MB Quad/QSPI PSRAM)"
+echo "1. firmware_N8R8.bin  (8MB Octal/OPI PSRAM)"
+echo "2. firmware_N8R16.bin (16MB Octal/OPI PSRAM)"
+echo "3. firmware_N8R2.bin  (2MB Quad/QSPI PSRAM)"
 echo "=========================================================="

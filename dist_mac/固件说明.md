@@ -65,12 +65,14 @@ graph TD
 ### 交付包目录结构：
 
 ```text
+├── flash_auto.py               # 核心全自动智能烧录器 (支持 eFuse 硬件识别 + 自动匹配 + 连机自检)
+├── flash_oneclick_mac.command  # Mac 用户双击运行 (全自动智能烧录，无需用户选择)
+├── flash_oneclick_mac.sh       # Mac 终端全自动运行脚本
+├── flash_oneclick.bat          # Windows 双击运行批处理 (内置自动硬件探测，零手动干预)
 ├── firmware_N8R8.bin           # 适配 N8R8 / N16R8 (8MB Octal/OPI PSRAM，满血 8.2MB 运存)
 ├── firmware_N8R16.bin          # 适配 N8R16 / N16R16 (16MB Octal/OPI PSRAM，满血 16MB 运存)
 ├── firmware_N8R2.bin           # 适配 N8R2 (2MB Quad/QSPI PSRAM，满血 2.0MB 运存)
 ├── firmware.bin                # 默认固件副本 (指向 N8R8)
-├── flash_oneclick_mac.command  # Mac 用户双击一键烧录脚本 (自带3合1硬件选型菜单)
-├── flash_oneclick.bat          # Windows 双击一键烧录批处理脚本 (自带3合1硬件选型菜单)
 ├── readme.txt                  # 简易操作说明
 ├── test_encoder.py             # 4路硬件PCNT编码器与中断测试脚本
 ├── test_gpio.py                # GPIO19/20 功能验证脚本
@@ -78,16 +80,16 @@ graph TD
 └── drivers/                    # CH340 / CP2102 串口驱动
 ```
 
-### 烧录操作步骤：
+### 烧录操作步骤 (无需手动选型)：
 1. **连接硬件**：用数据线将电脑连接至开发板的 **UART 接口**（带有 CH340 / CP2102 芯片一侧）。
 2. **关闭占用软件**：烧录前**务必关闭 Thonny IDE、串口助手**等软件，避免串口被独占。
-3. **运行脚本**：
+3. **双击运行脚本 (全流程自动)**：
    - **Mac 用户**：双击运行 `flash_oneclick_mac.command`（或终端运行 `./flash_oneclick_mac.sh`）。
    - **Windows 用户**：双击运行 `flash_oneclick.bat`。
-4. **手动进入下载模式（关键）**：
-   - 如果开发板的 CH340 未引出 RTS/DTR 自动复位电路，终端提示 `Connecting...` 时：
-   - **按住板子上的 [BOOT] 键不放，点按一下 [RST/RESET] 键，然后松开 [BOOT] 键**。
-   - 开发板将立即进入 ROM 下载模式并开始烧录，看到 `[√ 烧录成功！]` 即可。
+4. **全自动执行过程**：
+   - 脚本会自动扫描串口，并通过芯片底层 **eFuse 自动探测** PSRAM 规格（8MB / 16MB / 2MB）；
+   - 自动匹配并全片擦除烧录对应的满血固件；
+   - 烧录后自动连机校验 REPL 并打印当前可用 PSRAM 堆空间，无需任何用户交互。
 
 ---
 

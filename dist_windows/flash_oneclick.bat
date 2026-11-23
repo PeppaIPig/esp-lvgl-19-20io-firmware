@@ -9,54 +9,45 @@ set PYTHON_CMD=
 
 rem 1. Check if python is in PATH
 where python >nul 2>&1
-if %errorlevel% equ 0 set PYTHON_CMD=python
+if %errorlevel% equ 0 set PYTHON_CMD=python&& goto FOUND_PYTHON
 
 rem 2. Check if py launcher is available
-if "%PYTHON_CMD%"=="" (
-    where py >nul 2>&1
-    if %errorlevel% equ 0 set PYTHON_CMD=py -3
-)
+where py >nul 2>&1
+if %errorlevel% equ 0 set PYTHON_CMD=py -3&& goto FOUND_PYTHON
 
 rem 3. Check python3
-if "%PYTHON_CMD%"=="" (
-    where python3 >nul 2>&1
-    if %errorlevel% equ 0 set PYTHON_CMD=python3
-)
+where python3 >nul 2>&1
+if %errorlevel% equ 0 set PYTHON_CMD=python3&& goto FOUND_PYTHON
 
 rem 4. Check user local app data python installations
-if "%PYTHON_CMD%"=="" (
-    for /d %%D in ("%LOCALAPPDATA%\Programs\Python\Python3*") do (
-        if exist "%%D\python.exe" set PYTHON_CMD="%%D\python.exe"
-    )
+for /d %%D in ("%LOCALAPPDATA%\Programs\Python\Python3*") do (
+    if exist "%%D\python.exe" set PYTHON_CMD="%%D\python.exe"&& goto FOUND_PYTHON
 )
 
 rem 5. Check C:\Python3* installations
-if "%PYTHON_CMD%"=="" (
-    for /d %%D in ("C:\Python3*") do (
-        if exist "%%D\python.exe" set PYTHON_CMD="%%D\python.exe"
-    )
+for /d %%D in ("C:\Python3*") do (
+    if exist "%%D\python.exe" set PYTHON_CMD="%%D\python.exe"&& goto FOUND_PYTHON
 )
 
-rem If Python is not found, show clear error and help
-if "%PYTHON_CMD%"=="" (
-    echo ==============================================================================
-    echo [ERROR] Python 3 was not detected on your computer!
-    echo ==============================================================================
-    echo.
-    echo Please install Python 3 from official site:
-    echo   https://www.python.org/downloads/
-    echo.
-    echo IMPORTANT: Make sure to check "Add Python to PATH" during installation.
-    echo.
-    echo ------------------------------------------------------------------------------
-    echo [Alternative]: You can also flash the firmware directly using Thonny or Mixly:
-    echo   Firmware file: firmware_N8R8.bin  (Offset: 0x0)
-    echo ==============================================================================
-    echo.
-    pause
-    exit /b 1
-)
+rem If not found, show error and exit
+echo ==============================================================================
+echo [ERROR] Python 3 was not detected on your computer!
+echo ==============================================================================
+echo.
+echo Please install Python 3 from official site:
+echo   https://www.python.org/downloads/
+echo.
+echo IMPORTANT: Make sure to check "Add Python to PATH" during installation.
+echo.
+echo ------------------------------------------------------------------------------
+echo [Alternative]: You can also flash the firmware directly using Thonny or Mixly:
+echo   Firmware file: firmware_N8R8.bin, Offset: 0x0
+echo ==============================================================================
+echo.
+pause
+exit /b 1
 
+:FOUND_PYTHON
 echo [OK] Using Python: %PYTHON_CMD%
 echo.
 

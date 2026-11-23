@@ -15,16 +15,18 @@ import os
 import time
 import subprocess
 
+SERIAL_OK = True
 try:
     import serial
     import serial.tools.list_ports
-except ImportError:
+except Exception:
     print("[提示] 正在自动安装串口通信库 pyserial ...")
     try:
         subprocess.check_call([sys.executable, "-m", "pip", "install", "pyserial", "--quiet"])
         import serial
         import serial.tools.list_ports
     except Exception as e:
+        SERIAL_OK = False
         print(f"[警告] 自动安装 pyserial 失败: {e}，后续若出错请手动运行: pip install pyserial")
 
 try:
@@ -41,7 +43,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def find_esp_port():
     """自动扫描最匹配的开发板串口"""
-    if "serial" not in sys.modules or not hasattr(serial, "tools"):
+    if not SERIAL_OK:
         return None
     ports = list(serial.tools.list_ports.comports())
     candidates = []
@@ -92,7 +94,7 @@ def detect_psram_and_firmware(port):
 
     print(f"[√] 芯片类型: {chip_name}")
     if features:
-        print(f"[√] 硬件特性: {", ".join(features)}")
+        print("[√] 硬件特性: " + ", ".join(features))
 
     target_bin = "firmware_N8R8.bin"
     hw_desc = "ESP32-S3 N8R8 (8MB Octal/OPI PSRAM)"
@@ -160,7 +162,7 @@ def verify_board(port):
         s = serial.Serial(port, 115200, timeout=2)
         s.write(b"\x03")
         time.sleep(0.3)
-        s.write(b"import gc, os; print("BOARD:", os.uname().machine); print("MEM_FREE:", gc.mem_free())\r\n")
+        s.write(b'import gc, os; print("BOARD:", os.uname().machine); print("MEM_FREE:", gc.mem_free())\r\n')
         time.sleep(0.5)
         out = s.read(2048).decode("utf-8", errors="replace")
         s.close()
